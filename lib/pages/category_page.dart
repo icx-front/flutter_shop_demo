@@ -9,6 +9,7 @@ import 'package:flutter_easyrefresh/easy_refresh.dart';
 import '../model/categoryGoodsList.dart';
 import '../provide/category_goods_list.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import '../routers/application.dart';
 
 class CategoryPage extends StatefulWidget {
   @override
@@ -17,35 +18,35 @@ class CategoryPage extends StatefulWidget {
 
 class _CategoryPageState extends State<CategoryPage>{
 
-  void getGoodList()async{
-    var page = Provide.value<ChildCategory>(context).page;
-    var data={
-      'categoryId': Provide.value<ChildCategory>(context).categoryId,
-      'categorySubId': Provide.value<ChildCategory>(context).subId,
-      'page': page
-    };
-    var val = await httpRequest('getMallGoods',formData:data);
-    var res = json.decode(val.toString());
-    CategoryGoodsListModel goodsList = CategoryGoodsListModel.fromJson(res);
-    Provide.value<CategoryGoodsListProvide>(context).getGoodsList(page, goodsList.data);
-    if(goodsList.data==null){
-      Provide.value<ChildCategory>(context).changeNoMore('没有更多了');
-      Fluttertoast.showToast(
-        msg: '没有更多了',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.CENTER,
-        timeInSecForIos: 2,
-        backgroundColor: Colors.pink,
-        textColor: Colors.white,
-        fontSize: ScreenUtil().setSp(26)
-      );
-      if(page > 1){
-        Provide.value<ChildCategory>(context).reducePage();
-      }
-    } else {
-      Provide.value<ChildCategory>(context).changeNoMore('加载完成');
-    }
-  }
+  // void getGoodList()async{
+  //   var page = Provide.value<ChildCategory>(context).page;
+  //   var data={
+  //     'categoryId': Provide.value<ChildCategory>(context).categoryId,
+  //     'categorySubId': Provide.value<ChildCategory>(context).subId,
+  //     'page': page
+  //   };
+  //   var val = await httpRequest('getMallGoods',formData:data);
+  //   var res = json.decode(val.toString());
+  //   CategoryGoodsListModel goodsList = CategoryGoodsListModel.fromJson(res);
+  //   Provide.value<ChildCategory>(context).getGoodsList(page, goodsList.data);
+  //   if(goodsList.data==null){
+  //     Provide.value<ChildCategory>(context).changeNoMore('没有更多了');
+  //     Fluttertoast.showToast(
+  //       msg: '没有更多了',
+  //       toastLength: Toast.LENGTH_SHORT,
+  //       gravity: ToastGravity.CENTER,
+  //       timeInSecForIos: 2,
+  //       backgroundColor: Colors.pink,
+  //       textColor: Colors.white,
+  //       fontSize: ScreenUtil().setSp(26)
+  //     );
+  //     if(page > 1){
+  //       Provide.value<ChildCategory>(context).reducePage();
+  //     }
+  //   } else {
+  //     Provide.value<ChildCategory>(context).changeNoMore('加载完成');
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -58,11 +59,14 @@ class _CategoryPageState extends State<CategoryPage>{
       body: Container(
         child: Row(
           children: <Widget>[
-            LeftCategoryNav(getGoodList:getGoodList),
+            // LeftCategoryNav(getGoodList:getGoodList),
+            LeftCategoryNav(),
             Column(
               children: <Widget>[
-                RightCategoryNav(getGoodList:getGoodList),
-                CategoryGoodsList(getGoodList:getGoodList)
+                // RightCategoryNav(getGoodList:getGoodList),
+                // CategoryGoodsList(getGoodList:getGoodList)
+                RightCategoryNav(),
+                CategoryGoodsList()
               ],
             )
           ],
@@ -73,15 +77,14 @@ class _CategoryPageState extends State<CategoryPage>{
 }
 
 class LeftCategoryNav extends StatefulWidget{
-  final Function getGoodList;
-  LeftCategoryNav({Key key,this.getGoodList}):super(key:key);
+  // final Function getGoodList;
+  // LeftCategoryNav({Key key,this.getGoodList}):super(key:key);
   @override
   _LeftCategoryNavState createState() => _LeftCategoryNavState();
 }
 
 class _LeftCategoryNavState extends State<LeftCategoryNav>{
-  List list = [];
-  int listIndex = 0;
+  // List list = [];
   
   @override
   void initState() {
@@ -91,20 +94,26 @@ class _LeftCategoryNavState extends State<LeftCategoryNav>{
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: ScreenUtil().setWidth(180),
-      decoration: BoxDecoration(
-        border: Border(
-          right: BorderSide(width: 1,color:Colors.black12)
-        )
-      ),
-      child: ListView.builder(
-        scrollDirection: Axis.vertical,
-        itemCount:list.length,
-        itemBuilder: (context,index){
-          return _leftInkWell(index);
-        },
-      ),
+    return Provide<ChildCategory>(
+      builder: (context, child, val){
+        var list = val.list;
+        var listindex = val.listIndex;
+        return Container(
+          width: ScreenUtil().setWidth(180),
+          decoration: BoxDecoration(
+            border: Border(
+              right: BorderSide(width: 1,color:Colors.black12)
+            )
+          ),
+          child: ListView.builder(
+            scrollDirection: Axis.vertical,
+            itemCount:list.length,
+            itemBuilder: (context,index){
+              return _leftInkWell(context, index, list, listindex);
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -112,29 +121,27 @@ class _LeftCategoryNavState extends State<LeftCategoryNav>{
     await httpRequest('getCategory').then((val){
       var data = json.decode(val.toString());
       CategoryModel category= CategoryModel.fromJson(data);
-      setState(() {
-        list = category.data;
-      });
+      Provide.value<ChildCategory>(context).setLeftList(category.data);
       // 右侧子类初始化赋值
-      _setProvideData(0);
+      _setProvideData(Provide.value<ChildCategory>(context).listIndex);
     });
   }
   void _setProvideData(int index){
+    var list = Provide.value<ChildCategory>(context).list;
     var childList = list[index].bxMallSubDto;
     var categoryId = list[index].mallCategoryId;
     BxMallSubDtoListModel _childList = BxMallSubDtoListModel.fromJson(childList);
     Provide.value<ChildCategory>(context).getChildCategory(_childList.data, categoryId);
-    widget.getGoodList();
+    // widget.getGoodList();
+    Provide.value<ChildCategory>(context).getGoodList();
   }
 
-  Widget _leftInkWell(int index){
+  Widget _leftInkWell(context, int index, List list, int listIndex){
     return InkWell(
-      onTap: (){
-        setState(() {
-          listIndex = index;
-        });
-
-        _setProvideData(index);
+      onTap: ()async{
+        await Provide.value<ChildCategory>(context).changeListIndex(index);
+        // widget.getGoodList();
+        // Provide.value<ChildCategory>(context).getGoodList();
       },
       child: Container(
         height: ScreenUtil().setHeight(100),
@@ -156,8 +163,8 @@ class _LeftCategoryNavState extends State<LeftCategoryNav>{
 }
 
 class RightCategoryNav extends StatefulWidget {
-  final Function getGoodList;
-  RightCategoryNav({Key key,this.getGoodList}):super(key:key);
+  // final Function getGoodList;
+  // RightCategoryNav({Key key,this.getGoodList}):super(key:key);
 
   @override
   _RightCategoryNavState createState() => _RightCategoryNavState();
@@ -179,8 +186,8 @@ class _RightCategoryNavState extends State<RightCategoryNav> {
           )
         ),
         child: Provide<ChildCategory>(
-          builder: (context, child, childCategory) {
-            List _list = childCategory.childCategoryList;
+          builder: (context, child, val) {
+            List _list = val.childCategoryList;
             return ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: _list.length,
@@ -198,7 +205,8 @@ class _RightCategoryNavState extends State<RightCategoryNav> {
     return InkWell(
       onTap: () {
         Provide.value<ChildCategory>(context).changeChildIndex(index, item.mallSubId);
-        widget.getGoodList();
+        // widget.getGoodList();
+        Provide.value<ChildCategory>(context).getGoodList();
       },
       child: Container(
         padding: EdgeInsets.fromLTRB(5.0, 10.0, 5.0, 10.0),
@@ -212,22 +220,14 @@ class _RightCategoryNavState extends State<RightCategoryNav> {
 }
 
 class CategoryGoodsList extends StatefulWidget {
-  final Function getGoodList;
-  CategoryGoodsList({Key key,this.getGoodList}):super(key:key);
+  // final Function getGoodList;
+  // CategoryGoodsList({Key key,this.getGoodList}):super(key:key);
 
   @override
   _CategoryGoodsListState createState() => _CategoryGoodsListState();
 }
 
 class _CategoryGoodsListState extends State<CategoryGoodsList> {
-
-  // List list = [];
-
-  // @override
-  // void initState() {
-  //   _getGoodList();
-  //   super.initState();
-  // }
   GlobalKey<EasyRefreshState> _easyRefreshKey = new GlobalKey<EasyRefreshState>();
   GlobalKey<RefreshHeaderState> _easyRefreshHeaderKey = new GlobalKey<RefreshHeaderState>();
   GlobalKey<RefreshFooterState> _easyRefreshFooterKey = new GlobalKey<RefreshFooterState>();
@@ -250,7 +250,7 @@ class _CategoryGoodsListState extends State<CategoryGoodsList> {
 
         // child: ListView(
         //   children: <Widget>[
-        //     Provide<CategoryGoodsListProvide>(
+        //     Provide<ChildCategory>(
         //       builder: (context, child, data){
         //         List list = data.goodsList;
         //         return _listWidget2(list);
@@ -263,7 +263,7 @@ class _CategoryGoodsListState extends State<CategoryGoodsList> {
           key: _easyRefreshKey,
           child: ListView(
             children: <Widget>[
-              Provide<CategoryGoodsListProvide>(
+              Provide<ChildCategory>(
                 builder: (context, child, data){
                   List list = data.goodsList;
                   return _listWidget2(list);
@@ -272,10 +272,11 @@ class _CategoryGoodsListState extends State<CategoryGoodsList> {
             ],
           ),
           loadMore: ()async{
-            var goodsList = Provide.value<CategoryGoodsListProvide>(context).goodsList;
+            var goodsList = Provide.value<ChildCategory>(context).goodsList;
             if(goodsList.length > 0){
               Provide.value<ChildCategory>(context).addPage();
-              await widget.getGoodList();
+              // await widget.getGoodList();
+              Provide.value<ChildCategory>(context).getGoodList();
             } else {
               Provide.value<ChildCategory>(context).changeNoMore('没有更多了');
             }
@@ -360,7 +361,9 @@ class _CategoryGoodsListState extends State<CategoryGoodsList> {
     if(list.length > 0) {
       List<Widget> listWidget = list.map((val){
         return InkWell(
-          onTap: (){},
+          onTap: (){
+            Application.router.navigateTo(context, '/detail?id=${val.goodsId}');
+          },
           child: Container(
             width: ScreenUtil().setWidth(285),
             padding: EdgeInsets.only(top: 5.0,bottom: 5.0),
